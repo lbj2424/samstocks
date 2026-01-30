@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Portfolio Performance</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="title">📊 Performance</div>
+
+    <div class="meta">
+      <span class="pill" id="asOf">As of: …</span>
+
+      <a class="pill" href="index.html">Dashboard</a>
+      <a class="pill" href="ticker.html">Ticker Transactions</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <section class="card">
+      <div class="cardTitle">Select Period</div>
+
+      <div class="periodBar" id="periodBar">
+        <button class="periodBtn" data-period="MTD">MTD</button>
+        <button class="periodBtn" data-period="QTD">QTD</button>
+        <button class="periodBtn" data-period="YTD">YTD</button>
+        <button class="periodBtn" data-period="LM">Last Month</button>
+        <button class="periodBtn" data-period="LQ">Last Quarter</button>
+        <button class="periodBtn" data-period="LTM">Last 12 Months</button>
+        <button class="periodBtn" data-period="SI">Since Inception</button>
+      </div>
+
+      <div class="periodMeta" id="periodMeta">…</div>
+    </section>
+
+    <section class="grid kpis" style="margin-top:14px;">
+      <div class="card kpi"><div class="kpiLabel">Invested</div><div class="kpiValue" id="kpiInvested">$—</div></div>
+      <div class="card kpi"><div class="kpiLabel">Value</div><div class="kpiValue" id="kpiValue">$—</div></div>
+      <div class="card kpi"><div class="kpiLabel">Gain</div><div class="kpiValue" id="kpiGain">$—</div><div class="kpiSub" id="kpiReturn">—%</div></div>
+      <div class="card kpi"><div class="kpiLabel">IRR</div><div class="kpiValue" id="kpiIRR">—%</div><div class="kpiSub">money weighted</div></div>
+      <div class="card kpi"><div class="kpiLabel">Unique Tickers</div><div class="kpiValue" id="kpiTickers">—</div><div class="kpiSub">in this period</div></div>
+      <div class="card kpi"><div class="kpiLabel">Transactions</div><div class="kpiValue" id="kpiTxns">—</div><div class="kpiSub">in this period</div></div>
+    </section>
+
+    <section class="grid charts" style="margin-top:14px;">
+      <div class="card">
+        <div class="cardTitle">Best / Worst</div>
+        <div class="bwGrid">
+          <div class="bwBox">
+            <div class="bwLabel">Best</div>
+            <div class="bwTicker" id="bestTicker">—</div>
+            <div class="bwSub" id="bestPct">—%</div>
+          </div>
+          <div class="bwBox">
+            <div class="bwLabel">Worst</div>
+            <div class="bwTicker" id="worstTicker">—</div>
+            <div class="bwSub" id="worstPct">—%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cardTitle">Notes</div>
+        <div class="mutedBlock" id="notes">
+          Return % is based on (Value − Invested) / Invested for the selected period. IRR is money weighted using monthly timing.
+        </div>
+      </div>
+    </section>
+
+    <section class="card tableCard">
+      <div class="cardTitle">Period Breakdown by Ticker</div>
+
+      <div class="tableWrap">
+        <table id="perfTable">
+          <thead>
+            <tr>
+              <th data-sort="ticker">Ticker</th>
+              <th data-sort="invested">Invested</th>
+              <th data-sort="value">Value</th>
+              <th data-sort="gain">Gain $</th>
+              <th data-sort="gainPct">Gain %</th>
+              <th data-sort="contribPct">Contribution %</th>
+              <th data-sort="weight">Weight %</th>
+              <th data-sort="txns">Txns</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  
+  </main>
+
+  <script src="performance.js"></script>
+</body>
+</html>
