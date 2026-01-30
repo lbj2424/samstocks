@@ -1,0 +1,200 @@
+:root{
+  --bg:#0b0f16; --card:rgba(255,255,255,.06); --border:rgba(255,255,255,.10);
+  --text:#e8eefc; --muted:rgba(232,238,252,.75);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Segoe UI,Arial;background:var(--bg);color:var(--text)}
+.header{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;align-items:center}
+.title{font-weight:800;font-size:18px}
+.meta{display:flex;gap:10px;flex-wrap:wrap}
+.pill{padding:6px 10px;border:1px solid rgba(255,255,255,.14);border-radius:999px;font-size:12px;color:var(--muted)}
+.wrap{padding:18px 22px;max-width:1200px;margin:0 auto}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+.charts{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px}
+.kpiLabel{font-size:12px;color:var(--muted)}
+.kpiValue{font-size:26px;font-weight:800;margin-top:6px}
+.kpiSub{margin-top:2px;font-size:12px;color:var(--muted)}
+.cardTitle{font-weight:700;margin-bottom:10px;color:var(--muted)}
+.tableCard{margin-top:14px}
+.tableWrap{overflow:auto;border-radius:12px}
+table{width:100%;border-collapse:collapse;min-width:820px}
+th,td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:right}
+th:first-child,td:first-child{text-align:left}
+tbody tr:hover{background:rgba(255,255,255,.04)}
+.pos{color:#7CFFB2}
+.neg{color:#FF7C7C}
+
+/* Month dropdown visibility fix (GLOBAL) */
+select {
+  background-color: #0f172a;
+  color: #e8eefc;
+  border: 1px solid #2a3246;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  appearance: none;
+}
+
+select option {
+  background-color: #0f172a;
+  color: #e8eefc;
+}
+
+select:hover,
+select:focus {
+  background-color: #1e293b;
+  outline: none;
+  border-color: #3b82f6;
+}
+.tickerInput{
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.14);
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  outline: none;
+  min-width: 220px;
+}
+.tickerInput::placeholder{ color: rgba(232,238,252,.6); }
+.tickerInput:focus{
+  border-color: rgba(59,130,246,.8);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+
+th.sortable{ cursor: pointer; user-select: none; }
+th.sortable:hover{ background: rgba(255,255,255,.04); }
+th[data-sort]{ cursor:pointer; }
+th[data-sort]:hover{ text-decoration: underline; }
+
+
+/* ---- Performance page extras ---- */
+.periodBar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.periodBtn{
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.04);
+  color:var(--text);
+  padding:8px 12px;
+  border-radius:999px;
+  cursor:pointer;
+  font-size:12px;
+}
+
+.periodBtn:hover{
+  background:rgba(255,255,255,.08);
+}
+
+.periodBtn.active{
+  background:#1e293b;
+  border-color:#3b82f6;
+}
+
+.periodMeta{
+  margin-top:10px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+.bwGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.bwBox{
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:14px;
+  padding:12px;
+  background:rgba(255,255,255,.03);
+}
+
+.bwLabel{ font-size:12px; color:var(--muted); }
+.bwTicker{ font-size:22px; font-weight:800; margin-top:6px; }
+.bwSub{ font-size:12px; color:var(--muted); margin-top:2px; }
+
+.mutedBlock{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.35;
+}
+
+/* sortable header affordance */
+#perfTable thead th{
+  cursor:pointer;
+  user-select:none;
+}
+
+#perfTable thead th:hover{
+  background:rgba(255,255,255,.04);
+}
+
+.pill{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+#contribTable thead th{
+  cursor:pointer;
+  user-select:none;
+}
+#contribTable thead th:hover{
+  background:rgba(255,255,255,.04);
+}
+
+
+
+@media (max-width:900px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .charts{grid-template-columns:1fr}
+  /* ---------- Mobile header wrap fix (Option 1) ---------- */
+/* ---------- Mobile header layout fix ---------- */
+@media (max-width: 640px){
+  .header{
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  /* group nav pills visually */
+  .header > .pill{
+    margin-right: 6px;
+  }
+
+  /* make nav pills scrollable instead of squished */
+  .header{
+    overflow-x: hidden;
+  }
+
+  .headerNav{
+    display: flex;
+    gap: 8px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* meta pills (as-of, month, updates) */
+  .meta{
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .meta::-webkit-scrollbar{
+    display: none;
+  }
+  @media (max-width: 640px){
+  .header > .pill{
+    font-weight: 600;
+  }
+}
