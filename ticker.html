@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ticker Transactions</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="title">📌 Ticker Transactions</div>
+    <div class="meta">
+      <span class="pill" id="asOf">As of: …</span>
+      <a class="pill" href="index.html">← Back to Dashboard</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <div class="kpiLabel" style="margin:0;">Ticker</div>
+
+        <!-- searchable input with suggestions -->
+        <input id="tickerInput" list="tickerList" placeholder="Search e.g. NVDA" class="tickerInput" />
+        <datalist id="tickerList"></datalist>
+
+        <span class="pill" id="tickerPricePill">Price: —</span>
+        <span class="pill" id="rowCountPill">Rows: —</span>
+      </div>
+    </section>
+
+    <section class="card tableCard">
+      <div class="cardTitle" id="tableTitle">Transactions</div>
+      <div class="tableWrap">
+        <table id="txTable">
+          <thead>
+            <tr>
+              <th data-key="month" class="sortable">Month</th>
+              <th data-key="ticker" class="sortable">Ticker</th>
+              <th data-key="shares" class="sortable">Shares</th>
+              <th data-key="avg_cost" class="sortable">Avg Cost</th>
+              <th data-key="price" class="sortable">Last Price</th>
+              <th data-key="invested" class="sortable">Invested</th>
+              <th data-key="value" class="sortable">Value</th>
+              <th data-key="gain" class="sortable">Gain $</th>
+              <th data-key="gainPct" class="sortable">Gain %</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="kpiSub" id="hint" style="margin-top:10px;opacity:.8;">
+        Tip: click any header to sort. Click again to reverse.
+      </div>
+    </section>
+  </main>
+
+  <script src="ticker.js"></script>
+</body>
+</html>
