@@ -164,23 +164,29 @@ function initMainTableSorting(getCurrentRows){
 
 
 function makeCharts(rows){
-  // 1. Aggregate by ticker
+  // 1. Aggregate by ticker with Strict Number conversion
   const byTicker = new Map();
+  
   for (const r of rows) {
     const key = r.ticker;
     if (!byTicker.has(key)) {
       byTicker.set(key, { ticker: key, value: 0, invested: 0 });
     }
     const agg = byTicker.get(key);
-    agg.value += r.value;
-    agg.invested += r.invested;
+    
+    // FORCE NUMBER conversion to prevent "undefined" or string concatenation issues
+    const val = Number(r.value) || 0;
+    const inv = Number(r.invested) || 0;
+    
+    agg.value += val;
+    agg.invested += inv;
   }
 
-  // Convert to array and calculate gain % for each ticker
+  // 2. Convert to array and calculate gain % safely
   const aggRows = [...byTicker.values()]
     .map(r => {
-      // Safety check: ensure we don't divide by zero or create NaNs
       let gainPct = 0;
+      // Prevent division by zero
       if (r.invested > 0) {
         gainPct = (r.value - r.invested) / r.invested;
       }
@@ -188,7 +194,7 @@ function makeCharts(rows){
     })
     .sort((a,b) => b.value - a.value);
 
-  // -------------------- EXISTING CHARTS --------------------
+  // -------------------- EXISTING CHARTS (Alloc & Gains) --------------------
   
   const labels = aggRows.map(r => r.ticker);
   const values = aggRows.map(r => r.value);
@@ -217,7 +223,7 @@ function makeCharts(rows){
     }
   });
 
-  // -------------------- HEATMAP CHART (Updated) --------------------
+  // -------------------- HEATMAP CHART (Fixed) --------------------
 
   if (heatmapChart) heatmapChart.destroy();
 
@@ -237,12 +243,12 @@ function makeCharts(rows){
           labels: {
             display: true,
             color: "white",
-            // Formatter with NaN safety
+            font: { weight: 'bold' },
             formatter: (ctx) => {
               if (ctx.type !== 'data') return;
               const d = ctx.raw._data;
-              // If data is missing or broken, show placeholder
               if (!d) return "";
+              // Show 0.0% if NaN
               const gp = Number.isFinite(d.gainPct) ? (d.gainPct * 100).toFixed(1) + "%" : "0.0%";
               return [d.ticker, gp];
             }
@@ -251,19 +257,20 @@ function makeCharts(rows){
           backgroundColor: (ctx) => {
             if (ctx.type !== 'data') return 'transparent';
             const d = ctx.raw._data;
-            if (!d) return '#333'; // Default dark gray if no data
+            if (!d) return '#333'; 
 
             const gp = d.gainPct;
             
-            // Check for NaN or errors
+            // If NaN, default to dark gray
             if (!Number.isFinite(gp)) return '#333';
 
+            // Green for positive, Red for negative
             if (gp >= 0) {
               const alpha = 0.4 + Math.min(gp * 2, 0.5); 
-              return `rgba(16, 185, 129, ${alpha})`; // Green
+              return `rgba(16, 185, 129, ${alpha})`; 
             } else {
               const alpha = 0.4 + Math.min(Math.abs(gp) * 2, 0.5);
-              return `rgba(239, 68, 68, ${alpha})`; // Red
+              return `rgba(239, 68, 68, ${alpha})`; 
             }
           }
         }]
