@@ -238,7 +238,7 @@ function makeCharts(rows){
           groups: ['ticker'],
           spacing: 1,
           borderWidth: 0,
-          fontColor: "white",
+          // fontColor: "white", <--- REMOVED (Legacy/Invalid in v4)
           
           labels: {
             display: true,
@@ -246,9 +246,10 @@ function makeCharts(rows){
             font: { weight: 'bold' },
             formatter: (ctx) => {
               if (ctx.type !== 'data') return;
-              const d = ctx.raw._data;
+              // Safety check: ensure _data exists
+              const d = ctx.raw._data; 
               if (!d) return "";
-              // Show 0.0% if NaN
+              
               const gp = Number.isFinite(d.gainPct) ? (d.gainPct * 100).toFixed(1) + "%" : "0.0%";
               return [d.ticker, gp];
             }
@@ -256,15 +257,15 @@ function makeCharts(rows){
           
           backgroundColor: (ctx) => {
             if (ctx.type !== 'data') return 'transparent';
+            
+            // Safety check
             const d = ctx.raw._data;
             if (!d) return '#333'; 
 
             const gp = d.gainPct;
             
-            // If NaN, default to dark gray
             if (!Number.isFinite(gp)) return '#333';
 
-            // Green for positive, Red for negative
             if (gp >= 0) {
               const alpha = 0.4 + Math.min(gp * 2, 0.5); 
               return `rgba(16, 185, 129, ${alpha})`; 
@@ -281,9 +282,14 @@ function makeCharts(rows){
           legend: { display: false },
           tooltip: {
             callbacks: {
-              title: (items) => items[0].raw._data.ticker,
+              title: (items) => {
+                // Safety check for tooltip title
+                const d = items[0].raw._data;
+                return d ? d.ticker : "Unknown";
+              },
               label: (item) => {
                 const d = item.raw._data;
+                if (!d) return "";
                 const gpText = Number.isFinite(d.gainPct) ? pct(d.gainPct) : "—";
                 return `Value: ${money(d.value)} | Gain: ${gpText}`;
               }
@@ -293,8 +299,6 @@ function makeCharts(rows){
       }
     });
   }
-}
-
 function monthLabel(m){
   // expects YYYY-MM
   const s = String(m || "").trim();
