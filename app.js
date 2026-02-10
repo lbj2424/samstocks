@@ -177,15 +177,18 @@ function makeCharts(rows){
   }
 
   // Convert to array and calculate gain % for each ticker
-  // We sort by value so the biggest boxes are first
   const aggRows = [...byTicker.values()]
     .map(r => {
-      const gainPct = r.invested === 0 ? 0 : (r.value - r.invested) / r.invested;
+      // Safety check: ensure we don't divide by zero or create NaNs
+      let gainPct = 0;
+      if (r.invested > 0) {
+        gainPct = (r.value - r.invested) / r.invested;
+      }
       return { ...r, gainPct };
     })
     .sort((a,b) => b.value - a.value);
 
-  // -------------------- EXISTING CHARTS (Alloc & Gains) --------------------
+  // -------------------- EXISTING CHARTS --------------------
   
   const labels = aggRows.map(r => r.ticker);
   const values = aggRows.map(r => r.value);
@@ -214,7 +217,7 @@ function makeCharts(rows){
     }
   });
 
-  // -------------------- NEW HEATMAP CHART --------------------
+  // -------------------- HEATMAP CHART (Updated) --------------------
 
   if (heatmapChart) heatmapChart.destroy();
 
@@ -224,36 +227,40 @@ function makeCharts(rows){
       type: 'treemap',
       data: {
         datasets: [{
-          tree: aggRows,       // The data source
-          key: 'value',        // Box size depends on 'value'
-          groups: ['ticker'],  // Group by 'ticker'
+          tree: aggRows,
+          key: 'value',
+          groups: ['ticker'],
           spacing: 1,
           borderWidth: 0,
           fontColor: "white",
           
-          // Labels inside the boxes
           labels: {
             display: true,
             color: "white",
-            // Show Ticker and Gain %
+            // Formatter with NaN safety
             formatter: (ctx) => {
               if (ctx.type !== 'data') return;
-              const d = ctx.raw._data; 
-              return [d.ticker, (d.gainPct * 100).toFixed(1) + "%"];
+              const d = ctx.raw._data;
+              // If data is missing or broken, show placeholder
+              if (!d) return "";
+              const gp = Number.isFinite(d.gainPct) ? (d.gainPct * 100).toFixed(1) + "%" : "0.0%";
+              return [d.ticker, gp];
             }
           },
           
-          // Dynamic Background Color (Red/Green)
           backgroundColor: (ctx) => {
             if (ctx.type !== 'data') return 'transparent';
             const d = ctx.raw._data;
+            if (!d) return '#333'; // Default dark gray if no data
+
             const gp = d.gainPct;
             
-            // Logic: Green if positive, Red if negative.
-            // Opacity increases with magnitude of gain/loss (capped at 0.9)
+            // Check for NaN or errors
+            if (!Number.isFinite(gp)) return '#333';
+
             if (gp >= 0) {
               const alpha = 0.4 + Math.min(gp * 2, 0.5); 
-              return `rgba(16, 185, 129, ${alpha})`; // Emerald Green
+              return `rgba(16, 185, 129, ${alpha})`; // Green
             } else {
               const alpha = 0.4 + Math.min(Math.abs(gp) * 2, 0.5);
               return `rgba(239, 68, 68, ${alpha})`; // Red
@@ -270,7 +277,8 @@ function makeCharts(rows){
               title: (items) => items[0].raw._data.ticker,
               label: (item) => {
                 const d = item.raw._data;
-                return `Value: ${money(d.value)} | Gain: ${pct(d.gainPct)}`;
+                const gpText = Number.isFinite(d.gainPct) ? pct(d.gainPct) : "—";
+                return `Value: ${money(d.value)} | Gain: ${gpText}`;
               }
             }
           }
@@ -279,6 +287,7 @@ function makeCharts(rows){
     });
   }
 }
+
 function monthLabel(m){
   // expects YYYY-MM
   const s = String(m || "").trim();
