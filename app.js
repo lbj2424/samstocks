@@ -5,9 +5,10 @@ function pct(n){ return (n*100).toFixed(2) + "%"; }
 let allocChart = null;
 let gainsChart = null;
 let timelineChart = null;
-let sortState = { key: "value", dir: "desc" };
-let heatmapChart = null;
+let sortState = { key: "value", dir: "desc" }; // default sort like you do now
 let currentTableRows = [];
+
+
 
 // ---------- CSV + parsing helpers (robust) ----------
 function parseCSVLine(line) {
@@ -62,12 +63,12 @@ function normKey(k){
   return String(k || "")
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, "_");
+    .replace(/\s+/g, "_"); // "Total Cost" -> "total_cost"
 }
 
 async function loadCSV(path){
   const txt = await fetch(path, { cache: "no-store" }).then(r => r.text());
-  const clean = txt.replace(/^\uFEFF/, ""); 
+  const clean = txt.replace(/^\uFEFF/, ""); // remove Excel BOM if present
 
   const [headerLine, ...lines] = clean.trim().split(/\r?\n/);
   const headers = parseCSVLine(headerLine).map(normKey);
@@ -113,7 +114,6 @@ function buildTable(rows){
     tbody.appendChild(tr);
   }
 }
-
 function sortRows(rows, key, dir){
   const mult = dir === "asc" ? 1 : -1;
 
@@ -121,10 +121,12 @@ function sortRows(rows, key, dir){
     const av = a[key];
     const bv = b[key];
 
+    // string sort (ticker)
     if (typeof av === "string" || typeof bv === "string") {
       return String(av).localeCompare(String(bv)) * mult;
     }
 
+    // number sort
     const an = Number(av);
     const bn = Number(bv);
     if (Number.isNaN(an) && Number.isNaN(bn)) return 0;
@@ -133,7 +135,6 @@ function sortRows(rows, key, dir){
     return (an - bn) * mult;
   });
 }
-
 function initMainTableSorting(getCurrentRows){
   const table = document.getElementById("holdingsTable");
   if (!table || table.dataset.sortInit) return;
@@ -142,11 +143,13 @@ function initMainTableSorting(getCurrentRows){
   headers.forEach(th => {
     th.addEventListener("click", () => {
       const key = th.dataset.sort;
+
+      // toggle direction if clicking same column
       if (sortState.key === key) {
         sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
       } else {
         sortState.key = key;
-        sortState.dir = "desc";
+        sortState.dir = "desc"; // default when switching columns
       }
 
       const rows = getCurrentRows();
@@ -154,44 +157,31 @@ function initMainTableSorting(getCurrentRows){
       buildTable(sorted);
     });
   });
+
   table.dataset.sortInit = "1";
 }
 
+
 function makeCharts(rows){
-  // 1. Aggregate by ticker
+  // ✅ Aggregate by ticker so charts/legend are readable and stable
   const byTicker = new Map();
-  
   for (const r of rows) {
     const key = r.ticker;
     if (!byTicker.has(key)) {
       byTicker.set(key, { ticker: key, value: 0, invested: 0 });
     }
     const agg = byTicker.get(key);
-    
-    const val = Number(r.value) || 0;
-    const inv = Number(r.invested) || 0;
-    
-    agg.value += val;
-    agg.invested += inv;
+    agg.value += r.value;
+    agg.invested += r.invested;
   }
 
-  // 2. Convert to array
-  const aggRows = [...byTicker.values()]
-    .map(r => {
-      let gainPct = 0;
-      if (r.invested > 0) {
-        gainPct = (r.value - r.invested) / r.invested;
-      }
-      return { ...r, gainPct };
-    })
-    .sort((a,b) => b.value - a.value);
+  const aggRows = [...byTicker.values()].sort((a,b) => b.value - a.value);
 
-  // -------------------- Alloc & Gains Charts --------------------
-  
   const labels = aggRows.map(r => r.ticker);
   const values = aggRows.map(r => r.value);
-  const gains  = aggRows.map(r => r.gainPct * 100);
+  const gains  = aggRows.map(r => r.invested === 0 ? 0 : ((r.value - r.invested) / r.invested) * 100);
 
+  // ✅ Destroy old charts so changing month actually updates visuals
   if (allocChart) allocChart.destroy();
   if (gainsChart) gainsChart.destroy();
 
@@ -214,82 +204,9 @@ function makeCharts(rows){
       plugins: { legend: { labels: { color: "#e8eefc" } } }
     }
   });
-
-  // -------------------- HEATMAP CHART (FIXED) --------------------
-
-  if (heatmapChart) heatmapChart.destroy();
-
-  const ctxH = document.getElementById("chartHeatmap");
-  if (ctxH) {
-    heatmapChart = new Chart(ctxH, {
-      type: 'treemap',
-      data: {
-        datasets: [{
-          tree: aggRows,
-          key: 'value',
-          groups: ['ticker'],
-          spacing: 1,
-          borderWidth: 0,
-          
-          labels: {
-            display: true,
-            color: "white",
-            font: { weight: 'bold' },
-            formatter: (ctx) => {
-              if (ctx.type !== 'data') return;
-              const d = ctx.raw._data; 
-              if (!d) return "";
-              
-              const gp = Number.isFinite(d.gainPct) ? (d.gainPct * 100).toFixed(1) + "%" : "0.0%";
-              return [d.ticker, gp];
-            }
-          },
-          
-          backgroundColor: (ctx) => {
-            if (ctx.type !== 'data') return 'transparent';
-            
-            const d = ctx.raw._data;
-            if (!d) return '#333'; 
-
-            const gp = d.gainPct;
-            if (!Number.isFinite(gp)) return '#333';
-
-            // Green for positive, Red for negative
-            if (gp >= 0) {
-              const alpha = 0.4 + Math.min(gp * 2, 0.5); 
-              return `rgba(16, 185, 129, ${alpha})`; 
-            } else {
-              const alpha = 0.4 + Math.min(Math.abs(gp) * 2, 0.5);
-              return `rgba(239, 68, 68, ${alpha})`; 
-            }
-          }
-        }]
-      },
-      options: {
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              title: (items) => {
-                const d = items[0].raw._data;
-                return d ? d.ticker : "Unknown";
-              },
-              label: (item) => {
-                const d = item.raw._data;
-                if (!d) return "";
-                const gpText = Number.isFinite(d.gainPct) ? pct(d.gainPct) : "—";
-                return `Value: ${money(d.value)} | Gain: ${gpText}`;
-              }
-            }
-          }
-        }
-      }
-    });
-  }
 }
-
 function monthLabel(m){
+  // expects YYYY-MM
   const s = String(m || "").trim();
   const [y, mo] = s.split("-");
   const n = Number(mo);
@@ -308,6 +225,7 @@ const vLinePlugin = {
     const xScale = chart.scales.x;
     if (!xScale) return;
 
+    // ✅ Category scale wants an INDEX here
     const x = xScale.getPixelForValue(selectedIndex);
     if (!Number.isFinite(x)) return;
 
@@ -325,8 +243,9 @@ const vLinePlugin = {
   }
 };
 
+
 function makeTimelineChart(portfolioAllRows, priceMap, selectedMonth){
-  const monthAgg = new Map(); 
+  const monthAgg = new Map(); // month -> { invested, value }
 
   for (const p of portfolioAllRows) {
     const m = String(p.month || "").trim();
@@ -352,6 +271,7 @@ function makeTimelineChart(portfolioAllRows, priceMap, selectedMonth){
 
   let months = [...monthAgg.keys()].sort();
 
+  // If a month is selected, show timeline up to that month
   if (selectedMonth && selectedMonth !== "ALL") {
     months = months.filter(m => m <= selectedMonth);
   }
@@ -365,6 +285,8 @@ function makeTimelineChart(portfolioAllRows, priceMap, selectedMonth){
   });
 
   const labels = months.map(monthLabel);
+
+  // Cursor should be last point now
   const selectedIndex = months.length ? months.length - 1 : -1;
   const pointRadius = months.map((m, i) => (i === selectedIndex ? 5 : 2));
 
@@ -413,7 +335,14 @@ function makeTimelineChart(portfolioAllRows, priceMap, selectedMonth){
   });
 }
 
+function addMonths(date, n){
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + n);
+  return d;
+}
+
 function xnpv(rate, cashflows){
+  // cashflows: [{date: Date, amount: number}]
   const t0 = cashflows[0].date;
   return cashflows.reduce((sum, cf) => {
     const days = (cf.date - t0) / (1000 * 60 * 60 * 24);
@@ -422,29 +351,42 @@ function xnpv(rate, cashflows){
 }
 
 function xirr(cashflows){
+  // Basic bisection solver for IRR
+  // Needs at least one negative and one positive cashflow
   const hasNeg = cashflows.some(c => c.amount < 0);
   const hasPos = cashflows.some(c => c.amount > 0);
   if (!hasNeg || !hasPos) return null;
 
+  // sort by date
   cashflows = [...cashflows].sort((a,b) => a.date - b.date);
 
   let low = -0.9999;
-  let high = 10;
+  let high = 10; // 1000% upper bound
   let fLow = xnpv(low, cashflows);
   let fHigh = xnpv(high, cashflows);
 
+  // If we can't bracket a root, return null
   if (fLow * fHigh > 0) return null;
 
   for (let i = 0; i < 100; i++){
     const mid = (low + high) / 2;
     const fMid = xnpv(mid, cashflows);
+
     if (Math.abs(fMid) < 1e-8) return mid;
-    if (fLow * fMid < 0){ high = mid; fHigh = fMid; } else { low = mid; fLow = fMid; }
+
+    if (fLow * fMid < 0){
+      high = mid;
+      fHigh = fMid;
+    } else {
+      low = mid;
+      fLow = fMid;
+    }
   }
   return (low + high) / 2;
 }
 
 function calcPortfolioIRR(portfolioFiltered, priced, asOfStr){
+  // Build monthly contributions (cash outflows)
   const byMonth = new Map();
   for (const p of portfolioFiltered){
     const m = String(p.month || "").trim();
@@ -454,22 +396,25 @@ function calcPortfolioIRR(portfolioFiltered, priced, asOfStr){
     byMonth.set(m, (byMonth.get(m) || 0) + cost);
   }
 
-  const months = [...byMonth.keys()].sort();
+  const months = [...byMonth.keys()].sort(); // YYYY-MM sorts correctly
   if (!months.length) return null;
 
   const cashflows = months.map(m => {
     const [y, mo] = m.split("-");
-    const d = new Date(Number(y), Number(mo) - 1, 1);
+    const d = new Date(Number(y), Number(mo) - 1, 1); // assume 1st of month
     return { date: d, amount: -byMonth.get(m) };
   });
 
+  // Ending value as positive inflow on asOf date
   const asOf = asOfStr ? new Date(asOfStr) : new Date();
   const totalValue = priced.reduce((s,r) => s + r.value, 0);
   if (!Number.isFinite(totalValue) || totalValue <= 0) return null;
 
   cashflows.push({ date: asOf, amount: totalValue });
-  return xirr(cashflows);
+
+  return xirr(cashflows); // annualized rate (decimal)
 }
+
 
 // ---------- main ----------
 async function main(){
@@ -479,7 +424,9 @@ async function main(){
 
   document.getElementById("asOf").textContent = `As of: ${pricesFile.asOf || "—"}`;
 
+  // ---------------- Month dropdown setup ----------------
   const sel = document.getElementById("monthSelect");
+
   const months = [...new Set(
     portfolio.map(r => String(r.month || "").trim()).filter(Boolean)
   )].sort();
@@ -487,12 +434,14 @@ async function main(){
   if (sel && !sel.dataset.populated) {
     sel.innerHTML = `<option value="ALL">All</option>`;
     for (const m of months) {
-      const opt = document.createElement("option");
-      opt.value = m;
-      opt.textContent = monthLabel(m);
-      sel.appendChild(opt);
-    }
+  const opt = document.createElement("option");
+  opt.value = m;                 // ✅ keep raw value like 2025-12
+  opt.textContent = monthLabel(m); // ✅ show pretty label like Dec 2025
+  sel.appendChild(opt);
+}
     sel.dataset.populated = "1";
+
+    // ✅ Re-run dashboard on change
     sel.addEventListener("change", () => main());
   }
 
@@ -504,10 +453,12 @@ async function main(){
       ? portfolio
       : portfolio.filter(r => String(r.month || "").trim() === selectedMonth);
 
+  // Remove old missing pill if it exists (so they don't stack)
   const meta = document.querySelector(".meta");
   const oldMissing = meta?.querySelector(".pill.missingPill");
   if (oldMissing) oldMissing.remove();
 
+  // ---------------- Core calculations ----------------
   const priced = [];
   const missing = [];
 
@@ -537,6 +488,8 @@ async function main(){
     priced.push({ ticker: t, shares, avg_cost, price, invested, value, gain, gainPct });
   }
 
+
+
   const totalInvested = priced.reduce((s,r) => s + r.invested, 0);
   const totalValue    = priced.reduce((s,r) => s + r.value, 0);
   const totalGain     = totalValue - totalInvested;
@@ -556,19 +509,31 @@ async function main(){
   document.getElementById("kpiLoser").textContent    = loser ? loser.ticker : "—";
   document.getElementById("kpiLoserPct").textContent = loser ? pct(loser.gainPct) : "—";
 
-  const uniqueTickers = new Set(priced.map(r => r.ticker));
-  document.getElementById("kpiCount").textContent = String(uniqueTickers.size);
 
-  const irr = calcPortfolioIRR(portfolioFiltered, priced, pricesFile.asOf);
-  const irrText = irr == null ? "—" : `${(irr * 100).toFixed(2)}%`;
-  document.getElementById("kpiIRR").textContent = irrText;
+  // ✅ Unique ticker count (not transactions)
+const uniqueTickers = new Set(priced.map(r => r.ticker));
+document.getElementById("kpiCount").textContent = String(uniqueTickers.size);
 
-  currentTableRows = priced;
-  initMainTableSorting(() => currentTableRows);
-  const pricedSorted = sortRows(currentTableRows, sortState.key, sortState.dir);
+// ✅ IRR (money-weighted, monthly approximation)
+const irr = calcPortfolioIRR(portfolioFiltered, priced, pricesFile.asOf);
+const irrText = irr == null ? "—" : `${(irr * 100).toFixed(2)}%`;
+document.getElementById("kpiIRR").textContent = irrText;
 
-  buildTable(pricedSorted);
-  makeCharts(pricedSorted);
+
+
+// ✅ update the “current rows” to whatever month is selected
+currentTableRows = priced;
+
+// ✅ sorting hook (init once) — header clicks will always sort currentTableRows
+initMainTableSorting(() => currentTableRows);
+
+// ✅ apply current sort before showing
+const pricedSorted = sortRows(currentTableRows, sortState.key, sortState.dir);
+
+buildTable(pricedSorted);
+makeCharts(pricedSorted);
+
+
 
   if (missing.length) {
     const pill = document.createElement("span");
