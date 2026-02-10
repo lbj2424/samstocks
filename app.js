@@ -6,6 +6,7 @@ let allocChart = null;
 let gainsChart = null;
 let timelineChart = null;
 let sortState = { key: "value", dir: "desc" }; // default sort like you do now
+let heatmapChart = null; // <--- ADD THIS LINE
 let currentTableRows = [];
 
 
@@ -163,7 +164,7 @@ function initMainTableSorting(getCurrentRows){
 
 
 function makeCharts(rows){
-  // ✅ Aggregate by ticker so charts/legend are readable and stable
+  // 1. Aggregate by ticker
   const byTicker = new Map();
   for (const r of rows) {
     const key = r.ticker;
@@ -175,13 +176,21 @@ function makeCharts(rows){
     agg.invested += r.invested;
   }
 
-  const aggRows = [...byTicker.values()].sort((a,b) => b.value - a.value);
+  // Convert to array and calculate gain % for each ticker
+  // We sort by value so the biggest boxes are first
+  const aggRows = [...byTicker.values()]
+    .map(r => {
+      const gainPct = r.invested === 0 ? 0 : (r.value - r.invested) / r.invested;
+      return { ...r, gainPct };
+    })
+    .sort((a,b) => b.value - a.value);
 
+  // -------------------- EXISTING CHARTS (Alloc & Gains) --------------------
+  
   const labels = aggRows.map(r => r.ticker);
   const values = aggRows.map(r => r.value);
-  const gains  = aggRows.map(r => r.invested === 0 ? 0 : ((r.value - r.invested) / r.invested) * 100);
+  const gains  = aggRows.map(r => r.gainPct * 100);
 
-  // ✅ Destroy old charts so changing month actually updates visuals
   if (allocChart) allocChart.destroy();
   if (gainsChart) gainsChart.destroy();
 
@@ -204,6 +213,71 @@ function makeCharts(rows){
       plugins: { legend: { labels: { color: "#e8eefc" } } }
     }
   });
+
+  // -------------------- NEW HEATMAP CHART --------------------
+
+  if (heatmapChart) heatmapChart.destroy();
+
+  const ctxH = document.getElementById("chartHeatmap");
+  if (ctxH) {
+    heatmapChart = new Chart(ctxH, {
+      type: 'treemap',
+      data: {
+        datasets: [{
+          tree: aggRows,       // The data source
+          key: 'value',        // Box size depends on 'value'
+          groups: ['ticker'],  // Group by 'ticker'
+          spacing: 1,
+          borderWidth: 0,
+          fontColor: "white",
+          
+          // Labels inside the boxes
+          labels: {
+            display: true,
+            color: "white",
+            // Show Ticker and Gain %
+            formatter: (ctx) => {
+              if (ctx.type !== 'data') return;
+              const d = ctx.raw._data; 
+              return [d.ticker, (d.gainPct * 100).toFixed(1) + "%"];
+            }
+          },
+          
+          // Dynamic Background Color (Red/Green)
+          backgroundColor: (ctx) => {
+            if (ctx.type !== 'data') return 'transparent';
+            const d = ctx.raw._data;
+            const gp = d.gainPct;
+            
+            // Logic: Green if positive, Red if negative.
+            // Opacity increases with magnitude of gain/loss (capped at 0.9)
+            if (gp >= 0) {
+              const alpha = 0.4 + Math.min(gp * 2, 0.5); 
+              return `rgba(16, 185, 129, ${alpha})`; // Emerald Green
+            } else {
+              const alpha = 0.4 + Math.min(Math.abs(gp) * 2, 0.5);
+              return `rgba(239, 68, 68, ${alpha})`; // Red
+            }
+          }
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: (items) => items[0].raw._data.ticker,
+              label: (item) => {
+                const d = item.raw._data;
+                return `Value: ${money(d.value)} | Gain: ${pct(d.gainPct)}`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
 }
 function monthLabel(m){
   // expects YYYY-MM
