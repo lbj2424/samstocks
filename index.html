@@ -1,12 +1,31 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Portfolio Dashboard</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@3.0.0/dist/chartjs-chart-treemap.min.js"></script>
 </head>
+
+
+<section class="grid charts">
+      
+  <div class="card" style="grid-column: 1 / -1;">
+    <div class="cardTitle">Portfolio Heatmap</div>
+    <div style="height: 350px;"> 
+      <canvas id="chartHeatmap"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <div class="cardTitle">Allocation</div>
+    <canvas id="chartAlloc"></canvas>
+  </div>
+  <div class="card">
+    <div class="cardTitle">Gains by Ticker</div>
+    <canvas id="chartGains"></canvas>
+  </div>
+</section>
 <body>
   <header class="header">
     <div class="title">📈 Portfolio Dashboard</div>
