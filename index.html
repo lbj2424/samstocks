@@ -1,31 +1,13 @@
 <!doctype html>
 <html>
 <head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Portfolio Dashboard</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@3.0.0/dist/chartjs-chart-treemap.min.js"></script>
 </head>
-
-
-<section class="grid charts">
-      
-  <div class="card" style="grid-column: 1 / -1;">
-    <div class="cardTitle">Portfolio Heatmap</div>
-    <div style="height: 350px;"> 
-      <canvas id="chartHeatmap"></canvas>
-    </div>
-  </div>
-  <div class="card">
-    <div class="cardTitle">Allocation</div>
-    <canvas id="chartAlloc"></canvas>
-  </div>
-  <div class="card">
-    <div class="cardTitle">Gains by Ticker</div>
-    <canvas id="chartGains"></canvas>
-  </div>
-</section>
 <body>
   <header class="header">
     <div class="title">📈 Portfolio Dashboard</div>
@@ -34,20 +16,16 @@
     <div class="meta">
       <span class="pill" id="asOf">As of: …</span>
 
-      <!-- ✅ Month filter pill -->
       <span class="pill" style="display:flex;align-items:center;gap:.5rem;">
         Month
         <select id="monthSelect" style="background:transparent;color:inherit;border:none;outline:none;font:inherit;">
           <option value="ALL">All</option>
         </select>
       </span>
-
-     
     </div>
   </header>
 
   <main class="wrap">
-   
 
     <section class="grid kpis">
       <div class="card kpi"><div class="kpiLabel">Total Invested</div><div class="kpiValue" id="kpiInvested">$—</div></div>
@@ -57,14 +35,21 @@
       <div class="card kpi"><div class="kpiLabel">Top Loser</div><div class="kpiValue" id="kpiLoser">—</div><div class="kpiSub" id="kpiLoserPct">—%</div></div>
       <div class="card kpi"><div class="kpiLabel">Holdings</div><div class="kpiValue" id="kpiCount">—</div><div class="kpiSub">tickers</div></div>
       <div class="card">
-  <div class="kpiTitle">Portfolio IRR (Monthly)</div>
-  <div class="kpiValue" id="kpiIRR">—</div>
-  <div class="kpiSub">money-weighted</div>
-</div>
-
+        <div class="kpiTitle">Portfolio IRR (Monthly)</div>
+        <div class="kpiValue" id="kpiIRR">—</div>
+        <div class="kpiSub">money-weighted</div>
+      </div>
     </section>
 
     <section class="grid charts">
+      
+      <div class="card" style="grid-column: 1 / -1;">
+        <div class="cardTitle">Portfolio Heatmap</div>
+        <div style="height: 350px;"> 
+          <canvas id="chartHeatmap"></canvas>
+        </div>
+      </div>
+
       <div class="card">
         <div class="cardTitle">Allocation</div>
         <canvas id="chartAlloc"></canvas>
@@ -80,26 +65,26 @@
       <div class="tableWrap">
         <table id="holdingsTable">
           <thead>
-  <tr>
-    <th data-sort="ticker">Ticker</th>
-    <th data-sort="shares">Shares</th>
-    <th data-sort="avg_cost">Avg Cost</th>
-    <th data-sort="price">Last Price</th>
-    <th data-sort="invested">Invested</th>
-    <th data-sort="value">Value</th>
-    <th data-sort="gain">Gain $</th>
-    <th data-sort="gainPct">Gain %</th>
-  </tr>
-</thead>
-
+            <tr>
+              <th data-sort="ticker">Ticker</th>
+              <th data-sort="shares">Shares</th>
+              <th data-sort="avg_cost">Avg Cost</th>
+              <th data-sort="price">Last Price</th>
+              <th data-sort="invested">Invested</th>
+              <th data-sort="value">Value</th>
+              <th data-sort="gain">Gain $</th>
+              <th data-sort="gainPct">Gain %</th>
+            </tr>
+          </thead>
           <tbody></tbody>
         </table>
       </div>
     </section>
-     <section class="card">
-  <div class="cardTitle">Portfolio Value Over Time (using current prices)</div>
-  <canvas id="chartTimeline"></canvas>
-</section>
+
+    <section class="card">
+      <div class="cardTitle">Portfolio Value Over Time (using current prices)</div>
+      <canvas id="chartTimeline"></canvas>
+    </section>
   </main>
 
   <script src="app.js"></script>
