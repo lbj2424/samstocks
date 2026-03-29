@@ -1,6 +1,8 @@
 # Schwab export files — contain account numbers and position details
 Portfolio normal.csv
 ROTH IRA.csv
+Portfolio normal transcations.csv
+ROTH transactions.csv
 *.schwab.csv
 
 # Common system files
