@@ -325,7 +325,7 @@ function calcPortfolioIRR(buyRows, sellRows, priced, asOfStr) {
 }
 
 // ---------- Render (called each time filter changes) ----------
-function render(portfolio, priceMap, asOf, selectedMonth) {
+function render(portfolio, priceMap, asOf, selectedMonth, activeAccount) {
   // Timeline only uses buy rows so "invested" stays clean
   makeTimelineChart(portfolio.filter(p => (p.type || "buy") === "buy"), priceMap, selectedMonth);
 
@@ -375,20 +375,38 @@ function render(portfolio, priceMap, asOf, selectedMonth) {
   const priced  = [];
   const missing = [];
 
-  for (const [t, agg] of byTicker) {
-    const netShares = agg.buyShares - agg.sellShares;
-    if (netShares < 1e-9) continue; // fully sold, skip from holdings
+  const schwabHoldings = getSchwabHoldings(activeAccount);
 
-    const price = priceMap[t];
-    if (typeof price !== "number" || Number.isNaN(price)) { missing.push(t); continue; }
+  if (schwabHoldings && Object.keys(schwabHoldings).length > 0) {
+    // Use imported Schwab share counts + cost basis; prices still from prices.json
+    for (const [t, h] of Object.entries(schwabHoldings)) {
+      const price = priceMap[t];
+      if (typeof price !== "number" || Number.isNaN(price)) { missing.push(t); continue; }
+      const shares   = h.shares;
+      const invested = h.costBasis;
+      const value    = shares * price;
+      const gain     = value - invested;
+      const gainPct  = invested === 0 ? 0 : gain / invested;
+      const avg_cost = shares === 0 ? 0 : invested / shares;
+      priced.push({ ticker: t, shares, avg_cost, price, invested, value, gain, gainPct, realizedGain: 0 });
+    }
+  } else {
+    // Fall back to computing from portfolio.csv transactions
+    for (const [t, agg] of byTicker) {
+      const netShares = agg.buyShares - agg.sellShares;
+      if (netShares < 1e-9) continue; // fully sold, skip from holdings
 
-    const invested = agg.buyInvested - agg.sellCostBasis;
-    const value    = netShares * price;
-    const gain     = value - invested;
-    const gainPct  = invested === 0 ? 0 : gain / invested;
-    const avg_cost = netShares === 0 ? 0 : invested / netShares;
+      const price = priceMap[t];
+      if (typeof price !== "number" || Number.isNaN(price)) { missing.push(t); continue; }
 
-    priced.push({ ticker: t, shares: netShares, avg_cost, price, invested, value, gain, gainPct, realizedGain: agg.realizedGain });
+      const invested = agg.buyInvested - agg.sellCostBasis;
+      const value    = netShares * price;
+      const gain     = value - invested;
+      const gainPct  = invested === 0 ? 0 : gain / invested;
+      const avg_cost = netShares === 0 ? 0 : invested / netShares;
+
+      priced.push({ ticker: t, shares: netShares, avg_cost, price, invested, value, gain, gainPct, realizedGain: agg.realizedGain });
+    }
   }
 
   // ── Realized gains & dividends totals ────────────────────────────────────
@@ -464,8 +482,10 @@ function render(portfolio, priceMap, asOf, selectedMonth) {
   }
 }
 
-// ---------- Main (runs once) ----------
-async function main() {
+// ---------- Main (runs once, re-runs on account switch) ----------
+async function main(activeAccount) {
+  activeAccount = activeAccount || "all";
+
   try {
     if (!_portfolio)  _portfolio  = await loadCSV("portfolio.csv");
     if (!_pricesFile) _pricesFile = await loadJSON("prices.json");
@@ -495,10 +515,14 @@ async function main() {
       sel.appendChild(opt);
     }
     sel.dataset.populated = "1";
-    sel.addEventListener("change", () => render(_portfolio, priceMap, asOf, sel.value));
+    sel.addEventListener("change", () => render(_portfolio, priceMap, asOf, sel.value, activeAccount));
+  } else if (sel) {
+    // re-wire month dropdown with updated activeAccount
+    sel.onchange = null;
+    sel.addEventListener("change", () => render(_portfolio, priceMap, asOf, sel.value, activeAccount));
   }
 
-  render(_portfolio, priceMap, asOf, sel ? sel.value : "ALL");
+  render(_portfolio, priceMap, asOf, sel ? sel.value : "ALL", activeAccount);
 
   // ── Dividend modal ────────────────────────────────────────────────────────
   const divModal = document.getElementById("divModal");
