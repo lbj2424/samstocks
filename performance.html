@@ -9,12 +9,16 @@
 <body>
   <header class="header">
     <div class="title">📊 Performance</div>
-
+    <a class="pill" href="index.html">Dashboard</a>
+    <a class="pill" href="ticker.html">Ticker Transactions</a>
     <div class="meta">
       <span class="pill" id="asOf">As of: …</span>
 
-      <a class="pill" href="index.html">Dashboard</a>
-      <a class="pill" href="ticker.html">Ticker Transactions</a>
+      <span class="accountTabs">
+        <button class="pill accountTab" data-account="all">All</button>
+        <button class="pill accountTab" data-account="individual">Individual</button>
+        <button class="pill accountTab" data-account="roth">Roth IRA</button>
+      </span>
     </div>
   </header>
 
@@ -22,7 +26,6 @@
 
     <section class="card">
       <div class="cardTitle">Select Period</div>
-
       <div class="periodBar" id="periodBar">
         <button class="periodBtn" data-period="MTD">MTD</button>
         <button class="periodBtn" data-period="QTD">QTD</button>
@@ -32,7 +35,6 @@
         <button class="periodBtn" data-period="LTM">Last 12 Months</button>
         <button class="periodBtn" data-period="SI">Since Inception</button>
       </div>
-
       <div class="periodMeta" id="periodMeta">…</div>
     </section>
 
@@ -72,7 +74,6 @@
 
     <section class="card tableCard">
       <div class="cardTitle">Period Breakdown by Ticker</div>
-
       <div class="tableWrap">
         <table id="perfTable">
           <thead>
@@ -91,7 +92,7 @@
         </table>
       </div>
     </section>
-  
+
   </main>
 
   <script src="utils.js"></script>

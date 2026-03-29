@@ -61,7 +61,8 @@ async function loadCSV(path) {
         total_cost:    toNumber(row.total_cost),
         month:         String(row.month || "").trim(),
         type,
-        realized_gain: toNumber(row.realized_gain)
+        realized_gain: toNumber(row.realized_gain),
+        account:       String(row.account || "individual").trim().toLowerCase()
       };
     });
 }
@@ -121,124 +122,38 @@ function showError(msg) {
   banner.style.display = "block";
 }
 
-// ---- Schwab holdings import ----
-// Reads one or more Schwab "Positions" CSVs and extracts
-// shares + cost basis per ticker. Prices are intentionally
-// ignored — prices.json (updated by the GitHub Action) is
-// the source of truth for prices.
-
-// Detect account type from the first line of a Schwab CSV
-function detectSchwabAccountType(firstLine) {
-  const l = firstLine.toLowerCase();
-  if (l.includes("roth")) return "roth";
-  return "individual";
+// ---- Account filter (persisted across pages via localStorage) ----
+function getActiveAccount() {
+  return localStorage.getItem("activeAccount") || "all";
 }
 
-function parseSchwabHoldings(text) {
-  const rawLines = text.split("\n");
-
-  const accountType = detectSchwabAccountType(rawLines[0] || "");
-
-  // Find the column-header row (contains "Symbol")
-  let colIdx = -1;
-  for (let i = 0; i < rawLines.length; i++) {
-    if (rawLines[i].includes('"Symbol"')) { colIdx = i; break; }
-  }
-  if (colIdx === -1) return { accountType, holdings: {} };
-
-  const cols    = parseCSVLine(rawLines[colIdx]);
-  const symCol  = cols.findIndex(h => h === "Symbol");
-  const qtyCol  = cols.findIndex(h => h === "Qty (Quantity)");
-  const costCol = cols.findIndex(h => h === "Cost Basis");
-
-  if (symCol === -1 || qtyCol === -1) return { accountType, holdings: {} };
-
-  const holdings = {};
-  for (let i = colIdx + 1; i < rawLines.length; i++) {
-    const line = rawLines[i].trim();
-    if (!line) continue;
-    const vals   = parseCSVLine(line);
-    const symbol = (vals[symCol] || "").trim();
-    if (!symbol || symbol === "Cash & Cash Investments" || symbol === "Positions Total") continue;
-
-    const shares    = toNumber(vals[qtyCol]);
-    const costBasis = costCol !== -1 ? toNumber(vals[costCol]) : NaN;
-
-    if (!Number.isFinite(shares) || shares <= 0) continue;
-    if (!holdings[symbol]) holdings[symbol] = { shares: 0, costBasis: 0 };
-    holdings[symbol].shares    += shares;
-    if (Number.isFinite(costBasis)) holdings[symbol].costBasis += costBasis;
-  }
-
-  return { accountType, holdings };
+function setActiveAccount(a) {
+  localStorage.setItem("activeAccount", a);
 }
 
-// Reads FileList, stores each account separately, saves to localStorage
-async function importSchwabHoldings(files, onSuccess) {
-  const byAccount = { individual: {}, roth: {} };
-
-  for (const file of Array.from(files)) {
-    const text   = await file.text();
-    const result = parseSchwabHoldings(text);
-    const target = byAccount[result.accountType];
-    for (const [symbol, h] of Object.entries(result.holdings)) {
-      if (!target[symbol]) target[symbol] = { shares: 0, costBasis: 0 };
-      target[symbol].shares    += h.shares;
-      target[symbol].costBasis += h.costBasis;
-    }
-  }
-
-  const hasIndividual = Object.keys(byAccount.individual).length > 0;
-  const hasRoth       = Object.keys(byAccount.roth).length > 0;
-
-  if (!hasIndividual && !hasRoth) {
-    showError("No valid holdings found. Make sure you're uploading Schwab Positions CSVs.");
-    return;
-  }
-
-  if (hasIndividual) localStorage.setItem("schwab_holdings_individual", JSON.stringify(byAccount.individual));
-  if (hasRoth)       localStorage.setItem("schwab_holdings_roth",       JSON.stringify(byAccount.roth));
-
-  if (typeof onSuccess === "function") onSuccess(byAccount);
+function filterByAccount(rows, account) {
+  if (!account || account === "all") return rows;
+  return rows.filter(r => (r.account || "individual") === account);
 }
 
-// Returns holdings for the given account view: "all", "individual", or "roth"
-function getSchwabHoldings(account) {
-  const rawInd  = localStorage.getItem("schwab_holdings_individual");
-  const rawRoth = localStorage.getItem("schwab_holdings_roth");
+// Wire account tab buttons on the current page.
+// onChange(account) is called immediately with the current account,
+// and again whenever the user switches tabs.
+function initAccountTabs(onChange) {
+  const tabs = document.querySelectorAll(".accountTab");
+  if (!tabs.length) return;
 
-  let individual = {};
-  let roth       = {};
-  try { if (rawInd)  individual = JSON.parse(rawInd);  } catch {}
-  try { if (rawRoth) roth       = JSON.parse(rawRoth); } catch {}
+  const current = getActiveAccount();
 
-  if (account === "individual") return Object.keys(individual).length ? individual : null;
-  if (account === "roth")       return Object.keys(roth).length       ? roth       : null;
+  tabs.forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.account === current);
+    btn.addEventListener("click", () => {
+      const a = btn.dataset.account;
+      setActiveAccount(a);
+      tabs.forEach(b => b.classList.toggle("active", b === btn));
+      onChange(a);
+    });
+  });
 
-  // "all" — merge both
-  const merged = {};
-  for (const [s, h] of Object.entries(individual)) {
-    if (!merged[s]) merged[s] = { shares: 0, costBasis: 0 };
-    merged[s].shares    += h.shares;
-    merged[s].costBasis += h.costBasis;
-  }
-  for (const [s, h] of Object.entries(roth)) {
-    if (!merged[s]) merged[s] = { shares: 0, costBasis: 0 };
-    merged[s].shares    += h.shares;
-    merged[s].costBasis += h.costBasis;
-  }
-  return Object.keys(merged).length ? merged : null;
-}
-
-function clearSchwabHoldings() {
-  localStorage.removeItem("schwab_holdings_individual");
-  localStorage.removeItem("schwab_holdings_roth");
-  // also clear old combined key if present from previous version
-  localStorage.removeItem("schwab_holdings");
-}
-
-function hasSchwabHoldings() {
-  return !!(localStorage.getItem("schwab_holdings_individual") ||
-            localStorage.getItem("schwab_holdings_roth") ||
-            localStorage.getItem("schwab_holdings"));
+  onChange(current);
 }

@@ -15,29 +15,18 @@
     <div class="meta">
       <span class="pill" id="asOf">As of: …</span>
 
-      <!-- Account selector (visible only after Schwab import) -->
-      <span id="accountTabs" style="display:none; gap:4px; align-items:center;" class="accountTabs">
-        <button class="pill accountTab active" data-account="all">All Accounts</button>
+      <span class="accountTabs">
+        <button class="pill accountTab" data-account="all">All</button>
         <button class="pill accountTab" data-account="individual">Individual</button>
         <button class="pill accountTab" data-account="roth">Roth IRA</button>
       </span>
 
-      <!-- Month filter pill -->
       <span class="pill" style="display:flex;align-items:center;gap:.5rem;">
         Month
         <select id="monthSelect" style="background:transparent;color:inherit;border:none;outline:none;font:inherit;">
           <option value="ALL">All</option>
         </select>
       </span>
-
-      <!-- Schwab CSV import (shares + cost basis only; prices come from the daily yml) -->
-      <input type="file" id="schwabFileInput" accept=".csv" multiple style="display:none">
-      <button class="pill schwabImportBtn" id="schwabImportBtn" title="Import your Schwab Positions CSVs to sync shares & cost basis">
-        Import Schwab Holdings
-      </button>
-      <button class="pill schwabClearBtn" id="schwabClearBtn" title="Remove imported holdings and revert to portfolio.csv totals" style="display:none">
-        ✕ Clear Schwab Import
-      </button>
     </div>
   </header>
 
@@ -124,62 +113,5 @@
 
   <script src="utils.js"></script>
   <script src="app.js"></script>
-  <script>
-    // ── Account selector ──────────────────────────────────────────────────────
-    let _activeAccount = "all";
-    const _accountTabs = document.getElementById("accountTabs");
-
-    function _updateAccountTabs() {
-      const active = hasSchwabHoldings();
-      _accountTabs.style.display = active ? "flex" : "none";
-    }
-
-    document.querySelectorAll(".accountTab").forEach(btn => {
-      btn.addEventListener("click", () => {
-        _activeAccount = btn.dataset.account;
-        document.querySelectorAll(".accountTab").forEach(b => b.classList.toggle("active", b === btn));
-        _portfolio  = null;
-        _pricesFile = null;
-        main(_activeAccount);
-      });
-    });
-
-    // ── Schwab import wiring ──────────────────────────────────────────────────
-    const _schwabInput  = document.getElementById("schwabFileInput");
-    const _schwabImport = document.getElementById("schwabImportBtn");
-    const _schwabClear  = document.getElementById("schwabClearBtn");
-
-    function _updateSchwabUI() {
-      const active = hasSchwabHoldings();
-      _schwabClear.style.display = active ? "" : "none";
-      _schwabImport.textContent  = active ? "Re-import Schwab Holdings" : "Import Schwab Holdings";
-      _updateAccountTabs();
-    }
-
-    _schwabImport.addEventListener("click", () => _schwabInput.click());
-
-    _schwabInput.addEventListener("change", async () => {
-      if (!_schwabInput.files.length) return;
-      await importSchwabHoldings(_schwabInput.files, () => {
-        _updateSchwabUI();
-        _portfolio  = null;
-        _pricesFile = null;
-        main(_activeAccount);
-      });
-      _schwabInput.value = "";
-    });
-
-    _schwabClear.addEventListener("click", () => {
-      clearSchwabHoldings();
-      _activeAccount = "all";
-      document.querySelectorAll(".accountTab").forEach(b => b.classList.toggle("active", b.dataset.account === "all"));
-      _updateSchwabUI();
-      _portfolio  = null;
-      _pricesFile = null;
-      main(_activeAccount);
-    });
-
-    _updateSchwabUI();
-  </script>
 </body>
 </html>

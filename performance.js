@@ -202,9 +202,9 @@ function setActivePeriod(periodKey) {
 let currentPeriod = "YTD";
 
 async function main() {
-  let portfolio, pricesFile;
+  let allRows, pricesFile;
   try {
-    [portfolio, pricesFile] = await Promise.all([
+    [allRows, pricesFile] = await Promise.all([
       loadCSV("portfolio.csv"),
       loadJSON("prices.json")
     ]);
@@ -214,9 +214,9 @@ async function main() {
     return;
   }
 
-  const priceMap   = pricesFile.prices || {};
-  const asOfISO    = pricesFile.asOf   || "";
-  const asOfMonth  = monthFromISODate(asOfISO);
+  const priceMap  = pricesFile.prices || {};
+  const asOfISO   = pricesFile.asOf   || "";
+  const asOfMonth = monthFromISODate(asOfISO);
 
   document.getElementById("asOf").textContent = `As of: ${asOfISO || "—"}`;
 
@@ -224,18 +224,20 @@ async function main() {
   if (!bar.dataset.init) {
     bar.dataset.init = "1";
     setActivePeriod(currentPeriod);
-
     bar.addEventListener("click", (e) => {
       const btn = e.target.closest(".periodBtn");
       if (!btn) return;
       currentPeriod = btn.dataset.period;
       setActivePeriod(currentPeriod);
-      renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, currentPeriod);
+      renderForPeriod(filterByAccount(allRows, getActiveAccount()), priceMap, asOfISO, asOfMonth, currentPeriod);
     });
   }
 
   initTableSorting();
-  renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, currentPeriod);
+
+  initAccountTabs(account => {
+    renderForPeriod(filterByAccount(allRows, account), priceMap, asOfISO, asOfMonth, currentPeriod);
+  });
 }
 
 function renderForPeriod(portfolio, priceMap, asOfISO, asOfMonth, periodKey) {

@@ -80,10 +80,11 @@ function updateUIForTicker(tickerRaw) {
 
 // ---------- Main ----------
 async function main() {
+  let allRows, pricesFile;
   try {
-    ALL_ROWS = await loadCSV("portfolio.csv");
-    const pricesFile = await loadJSON("prices.json");
-    PRICE_MAP = pricesFile.prices || {};
+    allRows     = await loadCSV("portfolio.csv");
+    pricesFile  = await loadJSON("prices.json");
+    PRICE_MAP   = pricesFile.prices || {};
     document.getElementById("asOf").textContent = `As of: ${pricesFile.asOf || "—"}`;
   } catch (err) {
     showError("Failed to load data. Check that portfolio.csv and prices.json are present.");
@@ -91,41 +92,10 @@ async function main() {
     return;
   }
 
-  // Build ticker datalist
-  const tickers = [...new Set(
-    ALL_ROWS.map(r => String(r.ticker || "").trim().toUpperCase()).filter(Boolean)
-  )].sort();
-
-  const dl = document.getElementById("tickerList");
-  dl.innerHTML = "";
-  for (const t of tickers) {
-    const opt = document.createElement("option");
-    opt.value = t;
-    dl.appendChild(opt);
-  }
-
-  // Wire input (once)
-  const input = document.getElementById("tickerInput");
-  if (!input.dataset.wired) {
-    input.dataset.wired = "1";
-
-    // Pre-select ticker from URL param (?ticker=NVDA) or default to first
-    const urlTicker = new URLSearchParams(window.location.search).get("ticker");
-    if (urlTicker && tickers.includes(urlTicker.toUpperCase())) {
-      input.value = urlTicker.toUpperCase();
-    } else if (!input.value && tickers.length) {
-      input.value = tickers[0];
-    }
-
-    input.addEventListener("input",  () => updateUIForTicker(input.value));
-    input.addEventListener("change", () => updateUIForTicker(input.value));
-  }
-
   // Wire sort headers (once)
   document.querySelectorAll("#txTable thead th.sortable").forEach(th => {
     if (th.dataset.wired) return;
     th.dataset.wired = "1";
-
     th.addEventListener("click", () => {
       const key = th.dataset.key;
       if (!key) return;
@@ -139,10 +109,41 @@ async function main() {
     });
   });
 
-  updateUIForTicker(input.value);
+  initAccountTabs(account => {
+    ALL_ROWS = filterByAccount(allRows, account);
+
+    const tickers = [...new Set(
+      ALL_ROWS.map(r => String(r.ticker || "").trim().toUpperCase()).filter(Boolean)
+    )].sort();
+
+    const dl = document.getElementById("tickerList");
+    dl.innerHTML = "";
+    for (const t of tickers) {
+      const opt = document.createElement("option");
+      opt.value = t;
+      dl.appendChild(opt);
+    }
+
+    const input = document.getElementById("tickerInput");
+    if (!input.dataset.wired) {
+      input.dataset.wired = "1";
+      const urlTicker = new URLSearchParams(window.location.search).get("ticker");
+      if (urlTicker && tickers.includes(urlTicker.toUpperCase())) {
+        input.value = urlTicker.toUpperCase();
+      } else if (!input.value && tickers.length) {
+        input.value = tickers[0];
+      }
+      input.addEventListener("input",  () => updateUIForTicker(input.value));
+      input.addEventListener("change", () => updateUIForTicker(input.value));
+    } else {
+      // reset to first ticker in new account if current one doesn't exist
+      if (!tickers.includes(input.value.toUpperCase()) && tickers.length) {
+        input.value = tickers[0];
+      }
+    }
+
+    updateUIForTicker(input.value);
+  });
 }
 
-main().catch(err => {
-  console.error(err);
-  showError("Ticker page error. Check console.");
-});
+main().catch(err => { console.error(err); showError("Ticker page error. Check console."); });

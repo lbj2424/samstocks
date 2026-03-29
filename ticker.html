@@ -9,9 +9,16 @@
 <body>
   <header class="header">
     <div class="title">📌 Ticker Transactions</div>
+    <a class="pill" href="index.html">Dashboard</a>
+    <a class="pill" href="performance.html">Performance</a>
     <div class="meta">
       <span class="pill" id="asOf">As of: …</span>
-      <a class="pill" href="index.html">← Back to Dashboard</a>
+
+      <span class="accountTabs">
+        <button class="pill accountTab" data-account="all">All</button>
+        <button class="pill accountTab" data-account="individual">Individual</button>
+        <button class="pill accountTab" data-account="roth">Roth IRA</button>
+      </span>
     </div>
   </header>
 
@@ -19,11 +26,8 @@
     <section class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <div class="kpiLabel" style="margin:0;">Ticker</div>
-
-        <!-- searchable input with suggestions -->
         <input id="tickerInput" list="tickerList" placeholder="Search e.g. NVDA" class="tickerInput" />
         <datalist id="tickerList"></datalist>
-
         <span class="pill" id="tickerPricePill">Price: —</span>
         <span class="pill" id="rowCountPill">Rows: —</span>
       </div>
